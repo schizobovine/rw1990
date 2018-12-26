@@ -11,7 +11,7 @@
 
 // Pin configuration
 const int PIN_DATA  = 5;
-const int PIN_RED   = 9;
+const int PIN_RED   = 13;
 const int PIN_GREEN = 10;
 
 // Size of the serial number in bytes
@@ -130,12 +130,12 @@ void loop() {
   if (!ow.reset()) {
     SLOG("Failed to read serial");
     //SLOG("Failed to read serial #2");
-    blink_red(2);
+    //blink_red(2);
     return;
   }
   //ow.skip();
   //ow.select(address);
-  ow.write(CMD_READ_SERIAL, 1);
+  ow.write(CMD_READ_SERIAL);
   ow.read_bytes(found_serial, SERIAL_LEN);
   print_serial(found_serial);
 
@@ -147,18 +147,18 @@ void loop() {
   //set_led_red();
   if (!ow.reset()) {
     SLOG("Failed to write serial");
-    blink_red(3);
+    //blink_red(3);
     return;
   }
   //ow.select(found_serial);
   //ow.skip();
-  ow.write(CMD_WRITE_SERIAL, 1);
+  ow.write(CMD_WRITE_SERIAL);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
-  ow.depower();
+  //ow.depower();
   //ow.write(target_serial, SERIAL_LEN);
   //clear_led();
   
-  delay(10);
+  //delay(10);
 
   // Read back just-written serial
   //set_led_green();
@@ -170,7 +170,7 @@ void loop() {
     blink_red(6);
     return;
   }
-  ow.write(CMD_READ_SERIAL, 1);
+  ow.write(CMD_READ_SERIAL);
   ow.read_bytes(found_serial, SERIAL_LEN);
 
   // This should be the re-read serial, maybe different, maybe not; WHO NKOWS?
@@ -188,7 +188,7 @@ void loop() {
 
   // Made it this far, serials match, set to green
   SLOG("SUCCESS!");
-  blink_green(3);
+  blink_red(10);
   delay(10000);
 
 }
