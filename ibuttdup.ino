@@ -30,9 +30,9 @@ const uint16_t DELAY_RECV_START_LO = 8;
 const uint16_t DELAY_RECV_START_HI = 8;
 const uint16_t DELAY_RECV_END = 32;
 const uint16_t DELAY_WRITE_SP_ZERO_MID = 0;
-const uint16_t DELAY_WRITE_SP_ZERO_END = 10;
-const uint16_t DELAY_WRITE_SP_ONE_MID = 60;
-const uint16_t DELAY_WRITE_SP_ONE_END = 10;
+const uint16_t DELAY_WRITE_SP_ZERO_END = 8;
+const uint16_t DELAY_WRITE_SP_ONE_MID = 50;
+const uint16_t DELAY_WRITE_SP_ONE_END = 8;
 const uint16_t DELAY_RESET_LO = 480;
 const uint16_t DELAY_RESET_HI = 70;
 const uint16_t DELAY_RESET_END = 410;
@@ -54,6 +54,9 @@ static const uint8_t target_serial[] = {
 // Globals
 //uint8_t target_serial[SERIAL_LEN];
 uint8_t found_serial[SERIAL_LEN];
+
+// Because it's C and I can so fuck you
+#define SLOG(msg) do { if(Serial){ Serial.println(F( (msg) )); } } while (0)
 
 // Set LED to RED
 void set_led_red() {
@@ -212,6 +215,7 @@ uint8_t onewire_crc8(const uint8_t *addr, uint8_t len) {
 	return crc;
 }
 
+#if 0
 // Spin wait for device to respond
 void onewire_pause() {
   while ((digitalRead(PIN_DATA) == HIGH))
@@ -219,6 +223,7 @@ void onewire_pause() {
   while ((digitalRead(PIN_DATA) == LOW))
     ;
 }
+#endif
 
 void print_serial(uint8_t *serial) {
   if (Serial) {
@@ -253,22 +258,22 @@ void setup() {
 void loop() {
 
   set_led_green();
-  onewire_reset();
-  onewire_pause();
+  if (!onewire_reset()) {
+    return;
+  }
   onewire_send(CMD_SKIP_ROM);
-  onewire_reset();
-  onewire_pause();
 
   // attempt to read serial
   set_led_red();
-  onewire_reset();
-  onewire_pause();
+  if (!onewire_reset()) {
+    SLOG("Failed to read serial");
+    return;
+  }
   onewire_send(CMD_READ_SERIAL);
   for (int i=0; i<SERIAL_LEN; i++) {
-    set_led_red();
     found_serial[i] = onewire_recv();
-    clear_led();
   }
+  clear_led();
 
 #if 0
   // If serial number isn't valid, bail (and try again)
@@ -280,55 +285,38 @@ void loop() {
   // Otherwise, dump target serial to...serial (UART)
   print_serial(found_serial);
 
-#if 0
-  // Flash to get user to put on new key
-  set_led_green();
-  delay(500);
-  clear_led();
-  delay(500);
-  set_led_green();
-  delay(500);
-  clear_led();
-  delay(500);
-  set_led_green();
-  delay(500);
-  clear_led();
-  delay(500);
-  set_led_green();
-  delay(5000);
-#endif
-
   // Enter write mode
   set_led_red();
-  onewire_reset();
-  onewire_pause();
-  onewire_send(CMD_WRITE_SERIAL);
-  clear_led();
-  for (int i=0; i<SERIAL_LEN; i++) {
-    set_led_red();
-    onewire_write_sp(target_serial[i]);
-    clear_led();
+  if (!onewire_reset()) {
+    SLOG("Failed to write serial");
+    return;
   }
-  onewire_reset();
-  onewire_pause();
+  onewire_send(CMD_WRITE_SERIAL);
+  set_led_red();
+  for (int i=0; i<SERIAL_LEN; i++) {
+    onewire_write_sp(target_serial[i]);
+  }
+  clear_led();
 
   // Read back just-written serial
-  //onewire_reset();
-  //onewire_pause();
+  if (!onewire_reset()) {
+    SLOG("Failed to re-read serial");
+    return;
+  }
   onewire_send(CMD_READ_SERIAL);
   for (int i=0; i<SERIAL_LEN; i++) {
     set_led_red();
     found_serial[i] = onewire_recv();
     clear_led();
   }
+
+  // This should be the re-read serial, maybe different, maybe not; WHO NKOWS?
   print_serial(found_serial);
 
   // Verify serials match
   for (int i=0; i<SERIAL_LEN; i++) {
     if (target_serial[i] != found_serial[i]) {
-      if (Serial) {
-        Serial.println(F("Verification failed!"));
-      }
+      SLOG("Verification failed!");
       blink_red_thrice();
       delay(10000);
       return;
@@ -337,9 +325,7 @@ void loop() {
 
   // Made it this far, serials match, set to green
   set_led_green();
-  if (Serial) {
-    Serial.println(F("SUCCESS!"));
-  }
+  SLOG("SUCCESS!");
   blink_green_thrice();
   delay(10000);
 
