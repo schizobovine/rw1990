@@ -23,6 +23,7 @@ OneWire ow(PIN_DATA);
 // OneWire command bytes
 const uint8_t CMD_READ_SERIAL = 0x33;
 const uint8_t CMD_WRITE_SERIAL = 0xD5;
+const uint8_t CMD_MAGICAL_UNLOCK = 0xD1;
 
 static const uint8_t target_serial[] = {
 #include "serialnum.h"
@@ -31,8 +32,6 @@ static const uint8_t target_serial[] = {
 // Globals
 //uint8_t target_serial[SERIAL_LEN];
 uint8_t found_serial[SERIAL_LEN];
-uint8_t found_serial2[SERIAL_LEN];
-uint8_t address[8];
 
 // Because it's C and I can so fuck you
 #define SLOG(msg) do { if(Serial){ Serial.println(F( (msg) )); } } while (0)
@@ -53,26 +52,6 @@ void set_led_green() {
 void clear_led() {
   digitalWrite(PIN_RED, LOW);
   digitalWrite(PIN_GREEN, LOW);
-}
-
-// Blink red
-void blink_red(uint8_t times, uint16_t delay_ms=500) {
-  for (;times>=0; times--) {
-    set_led_red();
-    delay(delay_ms);
-    clear_led();
-    delay(delay_ms);
-  }
-}
-
-// Blink green
-void blink_green(uint8_t times, uint16_t delay_ms=500) {
-  for (;times>=0; times--) {
-    set_led_green();
-    delay(delay_ms);
-    clear_led();
-    delay(delay_ms);
-  }
 }
 
 // Barf out serial number over...well, serial. >_>
@@ -120,17 +99,17 @@ void loop() {
 
   // Some kind of magical knock sequence to enable serial programming?
   ow.reset();
-  ow.write(0xD1);
+  ow.write(CMD_MAGICAL_UNLOCK);
   ow.write_bit_rw1990(1);
 
   // Enter write mode
   ow.reset();
-  ow.write(0xD5, 1);
+  ow.write(CMD_WRITE_SERIAL, 1);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
 
   // Magical closing/commiting sequence?
   ow.reset();
-  ow.write(0xD1);
+  ow.write(CMD_MAGICAL_UNLOCK);
   ow.write_bit_rw1990(0);
 
   // Read back just-written serial
