@@ -95,7 +95,6 @@ void setup() {
   pinMode(PIN_DATA, INPUT);
   pinMode(PIN_RED, OUTPUT);
   pinMode(PIN_GREEN, OUTPUT);
-  set_led_green();
   if (Serial) {
     Serial.begin(9600);
     Serial.println("OneWire duplicator");
@@ -104,6 +103,7 @@ void setup() {
 
 void loop() {
 
+  // Don't try doing stuff unless we've got a device present
   if (!ow.reset()) {
     return;
   }
@@ -113,61 +113,37 @@ void loop() {
   //  SLOG("Failed to read serial");
   //  return;
   //}
-  //ow.write(CMD_READ_SERIAL);
-  //ow.read_bytes(found_serial1, SERIAL_LEN);
-  //print_serial(found_serial1);
-  //delay(10000);
+  ow.reset();
+  ow.write(CMD_READ_SERIAL);
+  ow.read_bytes(found_serial1, SERIAL_LEN);
+  print_serial(found_serial1);
 
-  //ow.reset();
-  //ow.reset();
-  //ow.reset();
-  //ow.reset();
-  //ow.write(0x1E);
-  //uint8_t response = ow.read();
-  //if (Serial) {
-  //  Serial.println(response, HEX);
-  //}
-
+  // Some kind of magical knock sequence to enable serial programming?
   ow.skip();
   ow.reset();
   ow.write(0xD1);
   ow.write_bit_rw1990(1);
 
-  //pinMode(PIN_DATA, OUTPUT);
-  //digitalWrite(PIN_DATA, HIGH);
-  //delay(4);
-  //pinMode(PIN_DATA, OUTPUT);
-  //digitalWrite(PIN_DATA, LOW);
-  //delay(16);
-  //pinMode(PIN_DATA, INPUT);
-  //delay(1);
-
   // Enter write mode
-  if (!ow.reset()) {
-    SLOG("Failed to write serial");
-    return;
-  }
+  //if (!ow.reset()) {
+  //  SLOG("Failed to write serial");
+  //  return;
+  //}
+  ow.reset();
   ow.write(0xD5, 1);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
 
+  // Magical closing/commiting sequence?
   ow.reset();
   ow.write(0xD1);
   ow.write_bit_rw1990(0);
 
-  //pinMode(PIN_DATA, OUTPUT);
-  //digitalWrite(PIN_DATA, HIGH);
-  //delay(4);
-  //pinMode(PIN_DATA, OUTPUT);
-  //digitalWrite(PIN_DATA, LOW);
-  //delay(16);
-  //pinMode(PIN_DATA, INPUT);
-  //delay(1);
-  
   // Read back just-written serial
-  if (!ow.reset()) {
-    SLOG("Failed to re-read serial");
-    return;
-  }
+  //if (!ow.reset()) {
+  //  SLOG("Failed to re-read serial");
+  //  return;
+  //}
+  ow.reset();
   ow.write(CMD_READ_SERIAL);
   ow.read_bytes(found_serial2, SERIAL_LEN);
   print_serial(found_serial2);
@@ -181,12 +157,16 @@ void loop() {
     }
   }
 
+  // Declare victory and try again sometime
   if (verified) {
     SLOG("SUCCESS!");
+    set_led_green();
   } else {
     SLOG("Verification failed!");
+    set_led_red();
   }
 
   delay(100000L);
+  clear_led();
 
 }
