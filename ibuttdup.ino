@@ -10,7 +10,7 @@
 #include <OneWire.h>
 
 // Pin configuration
-const int PIN_DATA  = 5;
+const int PIN_DATA  = 2;
 const int PIN_RED   = 13;
 const int PIN_GREEN = 10;
 
@@ -30,7 +30,8 @@ static const uint8_t target_serial[] = {
 
 // Globals
 //uint8_t target_serial[SERIAL_LEN];
-uint8_t found_serial[SERIAL_LEN];
+uint8_t found_serial1[SERIAL_LEN];
+uint8_t found_serial2[SERIAL_LEN];
 uint8_t address[8];
 
 // Because it's C and I can so fuck you
@@ -96,7 +97,7 @@ void setup() {
   pinMode(PIN_GREEN, OUTPUT);
   set_led_green();
   if (Serial) {
-    Serial.begin(115200);
+    Serial.begin(9600);
     Serial.println("OneWire duplicator");
   }
 }
@@ -107,88 +108,67 @@ void loop() {
     return;
   }
 
-  ////set_led_green();
-  //if (!ow.search(address)) {
-  //  ow.reset_search();
-  //  //clear_led();
-  //  SLOG("Failed to read serial");
-  //  blink_red(3);
-  //  return;
-  //}
-  //ow.reset_search();
-
-  //// Otherwise, dump target serial to...serial (UART)
-  //print_serial(address);
-  //if (ow.crc8(address, SERIAL_LEN-1) != address[SERIAL_LEN-1]) {
-  //  SLOG("CRC8 failed");
-  //} else {
-  //  SLOG("CRC8 OK");
-  //}
-  //clear_led();
-
   // attempt to read serial
   if (!ow.reset()) {
     SLOG("Failed to read serial");
-    //SLOG("Failed to read serial #2");
-    //blink_red(2);
     return;
   }
-  //ow.skip();
-  //ow.select(address);
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(found_serial, SERIAL_LEN);
-  print_serial(found_serial);
+  ow.read_bytes(found_serial1, SERIAL_LEN);
+  print_serial(found_serial1);
+  delay(10000);
+  return;
 
-  //delay(1000);
-  //return;
+  pinMode(PIN_DATA, OUTPUT);
+  digitalWrite(PIN_DATA, HIGH);
+  delay(4);
+  pinMode(PIN_DATA, OUTPUT);
+  digitalWrite(PIN_DATA, LOW);
   delay(16);
+  pinMode(PIN_DATA, INPUT);
+  delay(1);
 
   // Enter write mode
-  //set_led_red();
   if (!ow.reset()) {
     SLOG("Failed to write serial");
-    //blink_red(3);
     return;
   }
-  //ow.select(found_serial);
-  //ow.skip();
-  ow.write(CMD_WRITE_SERIAL);
+  ow.write(CMD_WRITE_SERIAL, 1);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
-  //ow.depower();
-  //ow.write(target_serial, SERIAL_LEN);
-  //clear_led();
-  
-  //delay(10);
 
+  pinMode(PIN_DATA, OUTPUT);
+  digitalWrite(PIN_DATA, HIGH);
+  delay(4);
+  pinMode(PIN_DATA, OUTPUT);
+  digitalWrite(PIN_DATA, LOW);
+  delay(16);
+  pinMode(PIN_DATA, INPUT);
+  delay(1);
+  
   // Read back just-written serial
-  //set_led_green();
   if (!ow.reset()) {
-  //if (!ow.search(found_serial)) {
-    //ow.reset_search();
-    //clear_led();
     SLOG("Failed to re-read serial");
-    blink_red(6);
     return;
   }
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(found_serial, SERIAL_LEN);
-
-  // This should be the re-read serial, maybe different, maybe not; WHO NKOWS?
-  print_serial(found_serial);
-  //clear_led();
+  ow.read_bytes(found_serial2, SERIAL_LEN);
+  print_serial(found_serial2);
 
   // Verify serials match
+  bool verified = true;
   for (int i=0; i<SERIAL_LEN; i++) {
-    if (target_serial[i] != found_serial[i]) {
-      SLOG("Verification failed!");
-      blink_red(10);
-      return;
+    if (target_serial[i] != found_serial2[i]) {
+      verified = false;
+      break;
     }
   }
 
-  // Made it this far, serials match, set to green
-  SLOG("SUCCESS!");
-  blink_red(10);
-  delay(10000);
+  if (verified) {
+    SLOG("SUCCESS!");
+  } else {
+    SLOG("Verification failed!");
+  }
+
+  delay(100000L);
 
 }
