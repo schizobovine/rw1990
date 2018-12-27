@@ -11,8 +11,6 @@
 
 // Pin configuration
 const int PIN_DATA  = 2;
-const int PIN_RED   = 13;
-const int PIN_GREEN = 10;
 
 // Size of the serial number in bytes
 const size_t SERIAL_LEN = 8;
@@ -25,34 +23,16 @@ const uint8_t CMD_READ_SERIAL = 0x33;
 const uint8_t CMD_WRITE_SERIAL = 0xD5;
 const uint8_t CMD_MAGICAL_UNLOCK = 0xD1;
 
+// Put you key code in a header file called dis
 static const uint8_t target_serial[] = {
 #include "serialnum.h"
 };
 
 // Globals
-//uint8_t target_serial[SERIAL_LEN];
 uint8_t found_serial[SERIAL_LEN];
 
 // Because it's C and I can so fuck you
 #define SLOG(msg) do { if(Serial){ Serial.println(F( (msg) )); } } while (0)
-
-// Set LED to RED
-void set_led_red() {
-  digitalWrite(PIN_GREEN, LOW);
-  digitalWrite(PIN_RED, HIGH);
-}
-
-// Set LED to GREEN
-void set_led_green() {
-  digitalWrite(PIN_RED, LOW);
-  digitalWrite(PIN_GREEN, HIGH);
-}
-
-// Clear LED
-void clear_led() {
-  digitalWrite(PIN_RED, LOW);
-  digitalWrite(PIN_GREEN, LOW);
-}
 
 // Barf out serial number over...well, serial. >_>
 void print_serial(uint8_t *serial) {
@@ -72,8 +52,6 @@ void print_serial(uint8_t *serial) {
 
 void setup() {
   pinMode(PIN_DATA, INPUT);
-  pinMode(PIN_RED, OUTPUT);
-  pinMode(PIN_GREEN, OUTPUT);
   if (Serial) {
     Serial.begin(9600);
     Serial.println("OneWire duplicator");
@@ -130,13 +108,10 @@ void loop() {
   // Declare victory and try again sometime
   if (verified) {
     SLOG("SUCCESS!");
-    set_led_green();
   } else {
-    SLOG("Verification failed!");
-    set_led_red();
+    SLOG("FAILURE!");
   }
 
-  delay(100000L);
-  clear_led();
+  delay(60000);
 
 }
