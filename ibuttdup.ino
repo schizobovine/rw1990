@@ -109,41 +109,59 @@ void loop() {
   }
 
   // attempt to read serial
-  if (!ow.reset()) {
-    SLOG("Failed to read serial");
-    return;
-  }
-  ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(found_serial1, SERIAL_LEN);
-  print_serial(found_serial1);
-  delay(10000);
-  return;
+  //if (!ow.reset()) {
+  //  SLOG("Failed to read serial");
+  //  return;
+  //}
+  //ow.write(CMD_READ_SERIAL);
+  //ow.read_bytes(found_serial1, SERIAL_LEN);
+  //print_serial(found_serial1);
+  //delay(10000);
 
-  pinMode(PIN_DATA, OUTPUT);
-  digitalWrite(PIN_DATA, HIGH);
-  delay(4);
-  pinMode(PIN_DATA, OUTPUT);
-  digitalWrite(PIN_DATA, LOW);
-  delay(16);
-  pinMode(PIN_DATA, INPUT);
-  delay(1);
+  //ow.reset();
+  //ow.reset();
+  //ow.reset();
+  //ow.reset();
+  //ow.write(0x1E);
+  //uint8_t response = ow.read();
+  //if (Serial) {
+  //  Serial.println(response, HEX);
+  //}
+
+  ow.skip();
+  ow.reset();
+  ow.write(0xD1);
+  ow.write_bit_rw1990(1);
+
+  //pinMode(PIN_DATA, OUTPUT);
+  //digitalWrite(PIN_DATA, HIGH);
+  //delay(4);
+  //pinMode(PIN_DATA, OUTPUT);
+  //digitalWrite(PIN_DATA, LOW);
+  //delay(16);
+  //pinMode(PIN_DATA, INPUT);
+  //delay(1);
 
   // Enter write mode
   if (!ow.reset()) {
     SLOG("Failed to write serial");
     return;
   }
-  ow.write(CMD_WRITE_SERIAL, 1);
+  ow.write(0xD5, 1);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
 
-  pinMode(PIN_DATA, OUTPUT);
-  digitalWrite(PIN_DATA, HIGH);
-  delay(4);
-  pinMode(PIN_DATA, OUTPUT);
-  digitalWrite(PIN_DATA, LOW);
-  delay(16);
-  pinMode(PIN_DATA, INPUT);
-  delay(1);
+  ow.reset();
+  ow.write(0xD1);
+  ow.write_bit_rw1990(0);
+
+  //pinMode(PIN_DATA, OUTPUT);
+  //digitalWrite(PIN_DATA, HIGH);
+  //delay(4);
+  //pinMode(PIN_DATA, OUTPUT);
+  //digitalWrite(PIN_DATA, LOW);
+  //delay(16);
+  //pinMode(PIN_DATA, INPUT);
+  //delay(1);
   
   // Read back just-written serial
   if (!ow.reset()) {
