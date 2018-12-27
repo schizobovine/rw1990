@@ -30,7 +30,7 @@ static const uint8_t target_serial[] = {
 
 // Globals
 //uint8_t target_serial[SERIAL_LEN];
-uint8_t found_serial1[SERIAL_LEN];
+uint8_t found_serial[SERIAL_LEN];
 uint8_t found_serial2[SERIAL_LEN];
 uint8_t address[8];
 
@@ -103,32 +103,27 @@ void setup() {
 
 void loop() {
 
-  // Don't try doing stuff unless we've got a device present
-  if (!ow.reset()) {
-    return;
+  // Don't try doing stuff unless we've got a device present (check a few times
+  // to be sure)
+  for (int i=0; i<8; i++) {
+    if (!ow.reset()) {
+      delayMicroseconds(1000);
+      return;
+    }
   }
 
   // attempt to read serial
-  //if (!ow.reset()) {
-  //  SLOG("Failed to read serial");
-  //  return;
-  //}
   ow.reset();
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(found_serial1, SERIAL_LEN);
-  print_serial(found_serial1);
+  ow.read_bytes(found_serial, SERIAL_LEN);
+  print_serial(found_serial);
 
   // Some kind of magical knock sequence to enable serial programming?
-  ow.skip();
   ow.reset();
   ow.write(0xD1);
   ow.write_bit_rw1990(1);
 
   // Enter write mode
-  //if (!ow.reset()) {
-  //  SLOG("Failed to write serial");
-  //  return;
-  //}
   ow.reset();
   ow.write(0xD5, 1);
   ow.write_bytes_rw1990(target_serial, SERIAL_LEN);
@@ -139,19 +134,15 @@ void loop() {
   ow.write_bit_rw1990(0);
 
   // Read back just-written serial
-  //if (!ow.reset()) {
-  //  SLOG("Failed to re-read serial");
-  //  return;
-  //}
   ow.reset();
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(found_serial2, SERIAL_LEN);
-  print_serial(found_serial2);
+  ow.read_bytes(found_serial, SERIAL_LEN);
+  print_serial(found_serial);
 
   // Verify serials match
   bool verified = true;
   for (int i=0; i<SERIAL_LEN; i++) {
-    if (target_serial[i] != found_serial2[i]) {
+    if (target_serial[i] != found_serial[i]) {
       verified = false;
       break;
     }
