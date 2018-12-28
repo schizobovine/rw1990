@@ -31,9 +31,7 @@ static const uint8_t target_serial[] = {
 };
 
 // Globals
-uint8_t serial_to_clone[SERIAL_LEN];
-uint8_t serial_before[SERIAL_LEN];
-uint8_t serial_after[SERIAL_LEN];
+uint8_t found_serial[SERIAL_LEN];
 
 // Macros: Because it's C and I can so fuck you
 
@@ -74,17 +72,27 @@ uint8_t serial_after[SERIAL_LEN];
 #define BLINK_RED(times) BLINK(RED, (times), BLINK_INTERVAL)
 #define BLINK_GREEN(times) BLINK(GREEN, (times), BLINK_INTERVAL)
 
+#define PRINT(...) do { if (Serial) { Serial.print(__VA_ARGS__); } } while(0)
+
 // If no response, reset and restart from the begining (return from // main())
 #define RESET_OR_RETURN() do { \
   if (!ow.reset()) { \
-    /*SLOG("Communication failure");*/ \
     delayMicroseconds(100); \
     return; \
   } \
 } while(0)
 
+// Compare two serials
+bool compare(const uint8_t *a, const uint8_t *b) {
+  for (int i=0; i<SERIAL_LEN; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Barf out serial number over...well, serial. >_>
-#define PRINT(...) do { if(Serial) { Serial.print(__VA_ARGS__); } } while(0)
 void print_serial(uint8_t *serial) {
   if (Serial) {
     for (int i=0; i<SERIAL_LEN; i++) {
@@ -111,15 +119,6 @@ void setup() {
   }
 }
 
-bool compare(const uint8_t *a, const uint8_t *b) {
-  for (int i=0; i<SERIAL_LEN; i++) {
-    if (a[i] != b[i]) {
-      return false;
-    }
-  }
-  return true;
-}
-
 void loop() {
 
   // Don't try doing stuff unless we've got a device present (check a few times
@@ -128,42 +127,19 @@ void loop() {
     RESET_OR_RETURN();
   }
 
-  // Signal ready to read key
+  // Signal ready
   SET_LED_GREEN();
 
-  // attempt to read first (key to clone) serial
-  RESET_OR_RETURN();
+  // attempt to read target key's serial
+  ow.reset();
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(serial_to_clone, SERIAL_LEN);
-  PRINT(F("Original\t"));
-  print_serial(serial_to_clone);
+  ow.read_bytes(found_serial, SERIAL_LEN);
+  PRINT(F("Before\t"));
+  print_serial(found_serial);
 
-  do {
-
-    // Signal key read successfully
-    BLINK_GREEN(3);
-    delay(10);
-
-    // Loop until user replaces with new key
-    while (ow.reset())
-      ;
-
-    // attempt to read target key's (original) serial
-    ow.reset();
-    ow.write(CMD_READ_SERIAL);
-    ow.read_bytes(serial_before, SERIAL_LEN);
-    PRINT(F("Before\t"));
-    print_serial(serial_before);
-
-    // If serials already match, user probably hasn't put on new key, so blink
-    // and try again
-
-  } while (compare(serial_to_clone, serial_before));
-
-  // Make sure connection is good again
-  for (int i=0; i<8; i++) {
-    RESET_OR_RETURN();
-  }
+  // Signal key read successfully
+  BLINK_GREEN(2);
+  delay(10);
   SET_LED_RED();
 
   // Some kind of magical knock sequence to enable serial programming?
@@ -185,18 +161,21 @@ void loop() {
   // Read back just-written serial
   ow.reset();
   ow.write(CMD_READ_SERIAL);
-  ow.read_bytes(serial_after, SERIAL_LEN);
+  ow.read_bytes(found_serial, SERIAL_LEN);
   PRINT(F("After\t"));
-  print_serial(serial_after);
-
-  // Signal write complete
-  BLINK_RED(1);
-  CLEAR_LED();
+  print_serial(found_serial);
 
   // Verify serials match
+  bool verified = true;
+  for (int i=0; i<SERIAL_LEN; i++) {
+    if (target_serial[i] != found_serial[i]) {
+      verified = false;
+      break;
+    }
+  }
 
   // Declare victory and try again sometime
-  if (compare(serial_to_clone, serial_after)) {
+  if (compare(target_serial, found_serial)) {
     SLOG("SUCCESS!");
     BLINK_GREEN(5);
   } else {
@@ -204,6 +183,7 @@ void loop() {
     BLINK_RED(5);
   }
 
+  // Wait a minute and start over
   delay(60000);
 
 }
