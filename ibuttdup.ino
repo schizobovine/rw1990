@@ -121,14 +121,14 @@ void setup() {
 
 void loop() {
 
+  // Signal ready
+  SET_LED_GREEN();
+
   // Don't try doing stuff unless we've got a device present (check a few times
   // to be sure)
   for (int i=0; i<8; i++) {
     RESET_OR_RETURN();
   }
-
-  // Signal ready
-  SET_LED_GREEN();
 
   // attempt to read target key's serial
   ow.reset();
@@ -139,8 +139,8 @@ void loop() {
 
   // Signal key read successfully
   BLINK_GREEN(2);
-  delay(10);
   SET_LED_RED();
+  delay(10);
 
   // Some kind of magical knock sequence to enable serial programming?
   ow.reset();
@@ -184,6 +184,6 @@ void loop() {
   }
 
   // Wait a minute and start over
-  delay(60000);
+  delay(5000);
 
 }
